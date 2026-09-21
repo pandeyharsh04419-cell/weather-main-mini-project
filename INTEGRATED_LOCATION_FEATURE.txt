@@ -1,0 +1,4 @@
+This is the main Weather & Travel app with the Location Pro feature integrated.
+
+Included: browser location permission, current GPS location, locality/district/state display, weather loading, AQI, route monitoring, PWA install support, manifest, service worker and icons.
+Upload the files in this ZIP to the root of the GitHub Pages repository.

@@ -1,15 +1,12 @@
-WEATHER & TRAVEL PRO+ — INDIA VILLAGE / LOCALITY SEARCH
+WEATHER & TRAVEL INDIA PRO+ — LOCATION UPGRADE
 
-This version adds Indian populated-place search using GeoNames before falling back to Open-Meteo. GeoNames feature class P covers cities, towns, villages and other populated places.
+Part 1: Location and permission
+- One-tap "Use my location" button.
+- Browser geolocation permission handling.
+- Shows location permission status.
+- Reverse-geocodes GPS coordinates into a nearby locality/city, district and state when available.
+- Remembers the last GPS coordinates locally for convenience.
+- If permission is already granted, the app can refresh the current location without asking again.
+- If permission is denied, the app explains how to allow it from browser site settings.
 
-Features:
-- Search Indian cities, towns, villages and populated localities
-- Shows place, district, state and country when available
-- Weather from Open-Meteo using the selected coordinates
-- 7-day forecast, chart, rain, humidity, wind, UV and sunrise/sunset
-- Celsius/Fahrenheit, dark mode, current location
-- Full route weather checkpoint monitor
-- Google Maps route visualization
-
-Internet is required.
-Data attribution: GeoNames (https://www.geonames.org/) and Open-Meteo (https://open-meteo.com/). GeoNames data is available under CC BY 4.0.
+The app still supports manual Indian place search.

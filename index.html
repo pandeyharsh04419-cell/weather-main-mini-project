@@ -17,7 +17,7 @@ main{max-width:1180px;margin:auto;padding:18px 14px 50px}.panel,.card{background
 <section class="hero">
 <div class="panel"><h1>Live weather anywhere.</h1><p class="muted">Search any city or use your location. Then monitor weather along a planned journey.</p>
 <div class="search"><input id="city" placeholder="Search any city, town or village in India"><button id="go" class="primary">Search</button></div><div id="results" class="results"></div>
-<div class="quick"><button class="secondary" data-city="Delhi">Delhi</button><button class="secondary" data-city="Mumbai">Mumbai</button><button class="secondary" data-city="Jaipur">Jaipur</button><button id="loc" class="secondary">📍 My location</button></div><div id="notice"></div></div>
+<div class="quick"><button class="secondary" data-city="Delhi">Delhi</button><button class="secondary" data-city="Mumbai">Mumbai</button><button class="secondary" data-city="Jaipur">Jaipur</button><button id="loc" class="primary">📍 Use my location</button></div><div id="locationStatus" class="small" style="margin-top:8px">📍 Location: Not enabled</div><div id="notice"></div></div>
 <div class="panel"><div class="label">SELECTED LOCATION</div><div id="place" class="value">None</div><p id="time" class="muted">Search a location to begin.</p><button id="c" class="primary">°C</button> <button id="f" class="secondary">°F</button></div>
 </section>
 
@@ -33,7 +33,7 @@ main{max-width:1180px;margin:auto;padding:18px 14px 50px}.panel,.card{background
 <div class="travel"><input id="from" placeholder="From city"><input id="to" placeholder="To city"><div class="travel-actions"><button id="monitor" class="primary">Monitor full route</button><button id="swap" class="secondary">⇄ Swap</button></div></div>
 <div id="routeStatus"></div><div id="summary" class="routegrid section hidden"></div><div id="tableWrap" class="monitor section hidden"></div><iframe id="map" class="map section hidden" loading="lazy"></iframe></section>
 
-<section class="panel section"><h2>How route monitoring works</h2><p class="muted">The route is divided into multiple weather checkpoints between the origin and destination. Each checkpoint is reverse-geocoded to a nearby place name for easier reading. Each checkpoint is queried from the weather service. This gives a weather corridor view rather than only checking the two endpoints.</p><div class="grid"><div class="card stat"><div class="label">Checkpoints</div><div class="value">Up to 12</div></div><div class="card stat"><div class="label">Monitored</div><div class="value">Rain + Wind</div></div><div class="card stat"><div class="label">Forecast</div><div class="value">Current</div></div><div class="card stat"><div class="label">Map</div><div class="value">Google Maps</div></div></div></section>
+<section class="panel section"><h2>How route monitoring works</h2><p class="muted">The route is divided into multiple weather checkpoints between the origin and destination. Each checkpoint is queried from the weather service. This gives a weather corridor view rather than only checking the two endpoints.</p><div class="grid"><div class="card stat"><div class="label">Checkpoints</div><div class="value">Up to 12</div></div><div class="card stat"><div class="label">Monitored</div><div class="value">Rain + Wind</div></div><div class="card stat"><div class="label">Forecast</div><div class="value">Current</div></div><div class="card stat"><div class="label">Map</div><div class="value">Google Maps</div></div></div></section>
 </main><footer>Weather & Travel Pro+ • No fixed city • Internet required • Weather corridor is an approximation between route endpoints</footer>
 
 <script>
@@ -67,7 +67,7 @@ function notice(x,err=false){$("notice").innerHTML=x?`<div class="${err?"error":
 async function geo(q){
 try{const r=await fetch(`https://secure.geonames.org/searchJSON?q=${encodeURIComponent(q)}&country=IN&featureClass=P&maxRows=12&style=FULL&username=demo`);if(r.ok){const j=await r.json();if(j.geonames?.length)return j.geonames.map(x=>({name:x.name,latitude:+x.lat,longitude:+x.lng,country:"India",country_code:"IN",admin1:x.adminName1||"",admin2:x.adminName2||"",admin3:x.adminName3||"",feature_code:x.fcode||"",population:+x.population||0}));}}catch(e){}
 const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=20&language=en&format=json&countryCode=IN`);if(!r.ok)throw Error("Location search failed");return (await r.json()).results||[]} 
-function locationLabel(p){return [p.name,p.admin2,p.admin1,p.country].filter(Boolean).join(", " )}
+function locationLabel(p){const a=[p.name,p.admin2,p.admin1,p.country].filter(Boolean);return a.filter((x,i)=>a.indexOf(x)===i).join(", ")}
 function showResults(list){const box=$("results");box.innerHTML=list.slice(0,12).map((p,i)=>`<button class="result" data-i="${i}"><b>${p.name}</b><br><span class="small">${locationLabel(p)}${p.feature_code?` • ${p.feature_code}`:""}</span></button>`).join("");box.querySelectorAll(".result").forEach(b=>b.onclick=()=>{box.innerHTML="";load(list[+b.dataset.i])})}
 async function wx(lat,lon){let u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto&forecast_days=7&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max`;let r=await fetch(u);if(!r.ok)throw Error("Weather service unavailable");return r.json()}
 async function aqi(lat,lon){
@@ -88,7 +88,52 @@ if(chart)chart.destroy();chart=new Chart($("chart"),{type:"line",data:{labels:d.
 $("go").onclick=async()=>{let q=$("city").value.trim();if(!q)return;try{let r=await geo(q);if(!r.length)throw Error("Location not found");showResults(r);load(r[0])}catch(e){notice(e.message,true)}};
 $("city").addEventListener("keydown",e=>{if(e.key==="Enter")$("go").click()});
 document.querySelectorAll("[data-city]").forEach(b=>b.onclick=()=>{$("city").value=b.dataset.city;$("go").click()});
-$("loc").onclick=()=>{if(!navigator.geolocation)return notice("Geolocation is not supported.",true);notice("Requesting location permission…");navigator.geolocation.getCurrentPosition(async p=>load({name:"My location",latitude:p.coords.latitude,longitude:p.coords.longitude,country:""}),()=>notice("Location permission was not granted.",true),{enableHighAccuracy:true,timeout:10000})};
+async function reverseLocation(lat,lon){
+  try{
+    const u=`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+    const r=await fetch(u,{cache:"no-store"});
+    if(r.ok){
+      const x=await r.json();
+      return {name:x.locality||x.city||x.principalSubdivision||"My location",latitude:lat,longitude:lon,country:x.countryName||"India",country_code:"IN",admin1:x.principalSubdivision||"",admin2:x.localityInfo?.administrative?.find(a=>a.name&&/district/i.test(a.description||""))?.name||x.city||"",admin3:"",feature_code:"GPS"};
+    }
+  }catch(e){}
+  return {name:"My location",latitude:lat,longitude:lon,country:"India",country_code:"IN",admin1:"",admin2:"",feature_code:"GPS"};
+}
+function setLocationStatus(text){if($("locationStatus"))$("locationStatus").textContent=text}
+function getCurrentLocation(){
+  if(!navigator.geolocation){setLocationStatus("📍 Location: Not supported by this browser");notice("Geolocation is not supported. Search a location instead.",true);return;}
+  setLocationStatus("📍 Location: Requesting permission…");
+  notice("Please allow location access when Chrome asks.");
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude,lon=pos.coords.longitude;
+    localStorage.setItem("weatherLastLocation",JSON.stringify({lat,lon}));
+    setLocationStatus("📍 Location: Access allowed");
+    notice("Location found. Loading weather…");
+    const place=await reverseLocation(lat,lon);
+    await load(place);
+  },err=>{
+    const message=err.code===1?"Location permission was denied. You can allow it from the browser site settings.":err.code===2?"Your location could not be determined. Please try again.":"Location request timed out. Please try again.";
+    setLocationStatus(err.code===1?"📍 Location: Permission denied":"📍 Location: Not available");
+    notice(message,true);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
+$("loc").onclick=getCurrentLocation;
+if("permissions" in navigator && navigator.permissions.query){
+  navigator.permissions.query({name:"geolocation"}).then(status=>{
+    const update=()=>{
+      if(status.state==="granted") setLocationStatus("📍 Location: Allowed");
+      else if(status.state==="denied") setLocationStatus("📍 Location: Permission denied");
+      else setLocationStatus("📍 Location: Ready — tap Use my location");
+    };
+    update(); status.onchange=update;
+    if(status.state==="granted"){
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        const place=await reverseLocation(pos.coords.latitude,pos.coords.longitude);
+        await load(place);
+      },()=>{}, {enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+    }
+  }).catch(()=>{});
+}
 $("c").onclick=()=>{unit="C";$("c").className="primary";$("f").className="secondary";if(selected)render()};$("f").onclick=()=>{unit="F";$("f").className="primary";$("c").className="secondary";if(selected)render()};
 $("theme").onclick=()=>{document.body.classList.toggle("dark");$("theme").textContent=document.body.classList.contains("dark")?"☀️ Light":"🌙 Dark"};
 $("swap").onclick=()=>[$("from").value,$("to").value]=[$("to").value,$("from").value];
@@ -100,22 +145,9 @@ let f=$("from").value.trim(),t=$("to").value.trim();if(!f||!t){$("routeStatus").
 $("routeStatus").innerHTML='<div class="loading">Finding cities and monitoring route checkpoints…</div>';try{
 let [fr,tr]=await Promise.all([geo(f),geo(t)]);if(!fr[0]||!tr[0])throw Error("Could not find one of the cities.");
 let ps=points(fr[0],tr[0],10), results=await Promise.all(ps.map(p=>wx(p.lat,p.lon)));
-// Convert each weather checkpoint coordinate into a real nearby place name.
-async function checkpointPlace(lat,lon,index){
-  try{
-    let r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`);
-    if(r.ok){
-      let d=await r.json(), a=d.address||{};
-      let name=a.village||a.town||a.city||a.municipality||a.suburb||a.county||a.state_district||a.state;
-      if(name) return name;
-    }
-  }catch(e){}
-  return `Checkpoint ${index+1}`;
-}
-let placeNames=await Promise.all(ps.map((p,i)=>checkpointPlace(p.lat,p.lon,i)));
 let risks=results.map(r=>risk(r)), high=risks.filter(x=>x[0]=="High").length, mod=risks.filter(x=>x[0]=="Moderate").length;
 $("summary").innerHTML=`<div class="card routepoint"><h3>📍 Start</h3><div class="big">${temp(results[0].current.temperature_2m)}</div><div class="small">${codes[results[0].current.weather_code]?.[1]||"Weather"}</div></div><div class="card routepoint"><h3>🏁 Destination</h3><div class="big">${temp(results.at(-1).current.temperature_2m)}</div><div class="small">${codes[results.at(-1).current.weather_code]?.[1]||"Weather"}</div></div><div class="card routepoint"><h3>⚠️ Route status</h3><div class="big">${high?"High":mod?"Moderate":"Low"}</div><div class="small">${high} high-risk and ${mod} moderate checkpoints</div></div>`;$("summary").classList.remove("hidden");
-let rows=results.map((r,i)=>{let q=r.current,z=codes[q.weather_code]||["🌤️","Weather"],rk=risks[i];return `<tr><td><b>${placeNames[i]}</b><div class="small">Checkpoint ${i+1} • ${(ps[i].lat).toFixed(2)}, ${(ps[i].lon).toFixed(2)}</div></td><td>${(ps[i].lat).toFixed(2)}, ${(ps[i].lon).toFixed(2)}</td><td>${temp(q.temperature_2m)}</td><td>${z[0]} ${z[1]}</td><td>${q.relative_humidity_2m}%</td><td>${km(q.wind_speed_10m)}</td><td>${q.precipitation} mm</td><td>${rk[0]}</td></tr>`}).join("");
+let rows=results.map((r,i)=>{let q=r.current,z=codes[q.weather_code]||["🌤️","Weather"],rk=risks[i];return `<tr><td>Checkpoint ${i+1}</td><td>${(ps[i].lat).toFixed(2)}, ${(ps[i].lon).toFixed(2)}</td><td>${temp(q.temperature_2m)}</td><td>${z[0]} ${z[1]}</td><td>${q.relative_humidity_2m}%</td><td>${km(q.wind_speed_10m)}</td><td>${q.precipitation} mm</td><td>${rk[0]}</td></tr>`}).join("");
 $("tableWrap").innerHTML=`<table><thead><tr><th>Point</th><th>Coordinates</th><th>Temp</th><th>Condition</th><th>Humidity</th><th>Wind</th><th>Rain</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>`;$("tableWrap").classList.remove("hidden");
 let from=[fr[0].name,fr[0].country].filter(Boolean).join(", "),to=[tr[0].name,tr[0].country].filter(Boolean).join(", ");$("map").src=`https://www.google.com/maps?q=${encodeURIComponent(from+" to "+to)}&output=embed`;$("map").classList.remove("hidden");$("routeStatus").innerHTML=`<div class="status">Monitored ${results.length} weather checkpoints between <b>${from}</b> and <b>${to}</b>. The checkpoint corridor is an approximation; Google Maps is the source for the actual road geometry. GeoNames is used for Indian populated-place search, including villages and localities.</div>`;
 }catch(e){$("routeStatus").innerHTML=`<div class="error">${e.message}</div>`}
