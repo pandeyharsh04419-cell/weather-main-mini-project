@@ -587,8 +587,8 @@ Search a location to begin.
 </div>
 
 <div class="card stat">
-<div class="label">🌧️ Rainfall</div>
-<div id="rainNow" class="value">--</div>
+<div class="label">🌧️ Rainfall Today</div>
+<div id="rainToday" class="value">--</div>
 <div class="small">mm</div>
 </div>
 
@@ -915,18 +915,18 @@ load(list[+b.dataset.i]);
 
 async function wx(lat,lon){
 
-let u=
-`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto&forecast_days=7&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,sunrise,sunset,uv_index_max`;
+  let u =
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto&forecast_days=7` +
+    `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,wind_speed_10m` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,sunrise,sunset,uv_index_max`;
 
-let r=await fetch(u);
+  let r = await fetch(u);
 
-if(!r.ok)
-throw Error("Weather service unavailable");
+  if(!r.ok)
+    throw Error("Weather service unavailable");
 
-return r.json();
-
+  return r.json();
 }
-
 
 async function aqi(lat,lon){
 
@@ -1010,6 +1010,12 @@ c=w.current,
 d=w.daily,
 cd=codes[c.weather_code]||["🌤️","Weather"];
 
+if((c.rain||0)>0 || (c.showers||0)>0){
+
+  cd=["🌧️","Rain"];
+
+}
+
 
 $("pname").textContent=locationLabel(p);
 
@@ -1028,7 +1034,8 @@ $("hum").textContent=c.relative_humidity_2m+"%";
 
 $("wind").textContent=km(c.wind_speed_10m);
 
-$("rain").textContent=c.precipitation+" mm";
+$("rain").textContent=
+`${c.precipitation ?? 0} mm`;
 
 $("uv").textContent=
 d.uv_index_max[0].toFixed(1);
@@ -1068,11 +1075,22 @@ aq.pm10!=null
 ?Number(aq.pm10).toFixed(1)
 :"--";
 
-$("rainNow").textContent=
-c.precipitation!=null
-?Number(c.precipitation).toFixed(1)
-:"--";
+const rainNowEl = $("rainNow");
+const rainTodayEl = $("rainToday");
 
+if(rainNowEl){
+  rainNowEl.textContent =
+    c.precipitation != null
+    ? Number(c.precipitation).toFixed(1)
+    : "--";
+}
+
+if(rainTodayEl){
+  rainTodayEl.textContent =
+    d.precipitation_sum?.[0] != null
+    ? Number(d.precipitation_sum[0]).toFixed(1)
+    : "--";
+}
 
 /* =========================
    PART 2 - 7 DAY FORECAST
@@ -1545,27 +1563,27 @@ $("from").value
 
 function points(a,b,n=10){
 
-let out=[];
+  let out=[];
 
-for(let i=0;i<n;i++){
+  for(let i=0;i<n;i++){
 
-let t=i/(n-1);
+    let t=i/(n-1);
 
-out.push({
+    out.push({
 
-lat:a.latitude+
-(b.latitude-a.latitude)*t,
+      lat:a.latitude+
+      (b.latitude-a.latitude)*t,
 
-lon:a.longitude+
-(b.longitude-a.longitude)*t,
+      lon:a.longitude+
+      (b.longitude-a.longitude)*t,
 
-ratio:t
+      ratio:t
 
-});
+    });
 
-}
+  }
 
-return out;
+  return out;
 
 }
 
@@ -1676,6 +1694,19 @@ risks.filter(x=>x[0]=="High").length;
 let mod=
 risks.filter(x=>x[0]=="Moderate").length;
 
+let worstIndex = risks.findIndex(x => x[0] === "High");
+
+if(worstIndex === -1)
+  worstIndex = risks.findIndex(x => x[0] === "Moderate");
+
+if(worstIndex === -1)
+  worstIndex = 0;
+
+let worstPlace = placeNames[worstIndex];
+
+let worstWeather =
+codes[results[worstIndex].current.weather_code]?.[1] ||
+"Weather";
 
 $("summary").innerHTML=`
 
@@ -1684,6 +1715,10 @@ $("summary").innerHTML=`
 <h3>📍 Start</h3>
 
 <div class="big">
+${placeNames[0]}
+</div>
+
+<div class="small">
 ${temp(results[0].current.temperature_2m)}
 </div>
 
@@ -1699,6 +1734,10 @@ ${codes[results[0].current.weather_code]?.[1]||"Weather"}
 <h3>🏁 Destination</h3>
 
 <div class="big">
+${placeNames.at(-1)}
+</div>
+
+<div class="small">
 ${temp(results.at(-1).current.temperature_2m)}
 </div>
 
@@ -1723,6 +1762,20 @@ ${high} high-risk and ${mod} moderate checkpoints
 
 </div>
 
+<div class="card routepoint">
+
+<h3>🌦️ Weather Alert Point</h3>
+
+<div class="big">
+${worstPlace}
+</div>
+
+<div class="small">
+${worstWeather}
+</div>
+
+</div>
+
 `;
 
 $("summary").classList.remove("hidden");
@@ -1735,6 +1788,12 @@ let q=r.current;
 let z=
 codes[q.weather_code]||
 ["🌤️","Weather"];
+
+if((q.rain||0)>0 || (q.showers||0)>0){
+
+  z=["🌧️","Rain"];
+
+}
 
 let rk=risks[i];
 
